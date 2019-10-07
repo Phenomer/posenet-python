@@ -23,7 +23,7 @@ class D435Manager():
         config = rs.config()
         config.enable_device(serial)
         config.enable_stream(rs.stream.depth, width, height, rs.format.z16, 30)
-        config.enable_stream(rs.stream.color, width, height, rs.format.rgb8, 30)
+        config.enable_stream(rs.stream.color, width, height, rs.format.bgr8, 30)
         D435Manager.profile = D435Manager.pipeline.start(config)
         align_to = rs.stream.color
         D435Manager.align = rs.align(align_to)
