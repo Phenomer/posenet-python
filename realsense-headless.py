@@ -1,5 +1,6 @@
+#!/usr/bin/python3
+
 import tensorflow as tf
-import cv2
 import time
 import argparse
 
@@ -9,8 +10,8 @@ import udpclient
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=int, default=101)
-parser.add_argument('--cam_width', type=int, default=848)
-parser.add_argument('--cam_height', type=int, default=480)
+parser.add_argument('--cam_width', type=int, default=424)
+parser.add_argument('--cam_height', type=int, default=240)
 parser.add_argument('--scale_factor', type=float, default=0.7125)
 parser.add_argument('--file', type=str, default=None, help="Optionally use a video file instead of a live camera")
 parser.add_argument('--host', type=str, default="127.0.0.1")
