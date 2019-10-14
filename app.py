@@ -66,21 +66,21 @@ def rs_main(jqueue):
                     dat[pi] = {}
 
                 for ki, (s, c) in enumerate(zip(keypoint_scores[pi, :], keypoint_coords[pi, :, :])):
-                        try:
-                            score = round(s, 3)
-                            #coord = [int(round(c[0])), int(round(c[1]))]
-                            depth = int(dimg['depth'][int(c[0]),int(c[1])])
-                            if depth == 0:
-                                continue
-                            point = pixcel_to_point(intr, c[1], c[0], int(dimg['depth'][int(c[0]),int(c[1])]))
-                            dat[pi][posenet.PART_NAMES[ki]] = {
-                                "score": score,
-                                #"coord": coord,
-                                #"depth": depth,
-                                "point": point
-                            }
-                        except IndexError:
-                            pass
+                    try:
+                        score = round(s, 3)
+                        #coord = [int(round(c[0])), int(round(c[1]))]
+                        depth = int(dimg['depth'][int(c[0]),int(c[1])])
+                        if depth == 0:
+                            continue
+                        point = pixcel_to_point(intr, c[1], c[0], int(dimg['depth'][int(c[0]),int(c[1])]))
+                        dat[pi][posenet.PART_NAMES[ki]] = {
+                            "score": score,
+                            #"coord": coord,
+                            #"depth": depth,
+                            "point": point
+                        }
+                    except IndexError:
+                        pass
 
             client.send(dat)
             jqueue.put(dat, True)
