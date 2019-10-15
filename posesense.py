@@ -6,10 +6,12 @@ import time
 import argparse
 import math
 import random
+import statistics
 
 import posenet
 import d435
 import udpclient
+import dictstat
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=int, default=101)
@@ -51,19 +53,17 @@ def body_angle(dat):
     s0 = dat['leftShoulder']['point'][0] - (dat['leftShoulder']['point'][0] - dat['rightShoulder']['point'][0]) / 2
     s1 = dat['leftShoulder']['point'][1] - (dat['leftShoulder']['point'][1] - dat['rightShoulder']['point'][1]) / 2
     return angle(s0, s1, h0, h1) - 90
-    #return angle(0, 0, h0, h1) - 90
 
 def body_z_angle(dat):
     h0 = dat['leftHip']['point'][1] - (dat['leftHip']['point'][1] - dat['rightHip']['point'][1]) / 2
     h1 = dat['leftHip']['point'][2] - (dat['leftHip']['point'][2] - dat['rightHip']['point'][2]) / 2
     s0 = dat['leftShoulder']['point'][1] - (dat['leftShoulder']['point'][1] - dat['rightShoulder']['point'][1]) / 2
     s1 = dat['leftShoulder']['point'][2] - (dat['leftShoulder']['point'][2] - dat['rightShoulder']['point'][2]) / 2
-    return angle(s0, s1, h0, h1) - 310
+    return angle(h0, h1, s0, s1) - 170
 
 def shoulder_angle(dat):
     s0 = dat['leftShoulder']['point'][0] - (dat['leftShoulder']['point'][0] - dat['rightShoulder']['point'][0]) / 2
     s1 = dat['leftShoulder']['point'][1] - (dat['leftShoulder']['point'][1] - dat['rightShoulder']['point'][1]) / 2
-    #return angle(0, 0, s0, s1) - 90
     return angle(dat["nose"]["point"][0], dat["nose"]["point"][1], s0, s1) - 90
 
 def leftarm_angle(dat):
@@ -98,6 +98,7 @@ def rs_main():
         frame_count = 0
         intr = d435m.depth_intrinsics
         dat = {}
+        dstat = dictstat.DictStat(10)
 
         while True:
             dimg  = d435m.frame()
@@ -121,7 +122,7 @@ def rs_main():
 
 
             for pi in range(len(pose_scores)):
-                if pose_scores[pi] == 0.:
+                if pose_scores[pi] <= 0.5:
                     break
                 #print("Pose #%d, score %f" % (pi, pose_scores[pi]))
                 if not pi in dat:
@@ -158,21 +159,19 @@ def rs_main():
                     'rightarm_angle':   rightarm_angle(dat[0]),
                     'leftarm_z_angle':  leftarm_z_angle(dat[0]),
                     'rightarm_z_angle': rightarm_z_angle(dat[0])}
-                client.send(data)
-                print("EYE:{eye: >4}, MOUSE:{mouse: >4}, FACE_LR:{face_orient_lr: >4}, FACE_Z:{face_z_angle: >4}, BODY:{body_angle: >4}, BODY_Z:{body_z_angle: >4}, SHO:{shoulder_angle: >4}, LARM:{leftarm_angle: >4}, RARM:{rightarm_angle: >4}, LARMZ:{leftarm_z_angle: >4}, RARMZ:{rightarm_z_angle: >4}".format(**data), end="\r")
-                #print(data)#, end="\r")
-                #debug_print(dat[0])
+                dstat.append(data)
+                stat = dstat.process(statistics.mean)
+                client.send(stat)
+                print("EYE:{eye: >4}, MOUSE:{mouse: >4}, FACE_LR:{face_orient_lr: >4}, FACE_Z:{face_z_angle: >4}, BODY:{body_angle: >4}, BODY_Z:{body_z_angle: >4}, SHO:{shoulder_angle: >4}, LARM:{leftarm_angle: >4}, RARM:{rightarm_angle: >4}, LARMZ:{leftarm_z_angle: >4}, RARMZ:{rightarm_z_angle: >4}".format(**stat), end="\r")
             except KeyError as e:
                 print(e)
                 pass
-            #client.send(dat)
             overlay_image = posenet.draw_skel_and_kp(
                 display_image, pose_scores, keypoint_scores, keypoint_coords,
                 min_pose_score=0.15, min_part_score=0.1)
 
             cv2.imshow('posenet', overlay_image)
             frame_count += 1
-            #time.sleep(1)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
