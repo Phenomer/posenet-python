@@ -7,6 +7,7 @@ import argparse
 import math
 import random
 import statistics
+import numpy as np
 
 import posenet
 import d435
@@ -87,12 +88,19 @@ def pixel_to_point(intr, x, y, d):
 	uy = ny * f + 2 * intr.coeffs[3] * nx * ny + intr.coeffs[2] * (r2 + 2 * ny * ny)
 	return [d * ux, d * uy, d]
 
+def clip_frame(depth_frame, color_frame, clipping_distance):
+    grey_color = 153
+    dimage_3d  = np.dstack((depth_frame,depth_frame,depth_frame))
+    bg_removed = np.where((dimage_3d > clipping_distance) | (dimage_3d <= 0), grey_color, color_frame)
+    return bg_removed
+
 def rs_main():
     with tf.Session() as sess:
         model_cfg, model_outputs = posenet.load_model(args.model, sess)
         output_stride = model_cfg['output_stride']
 
         d435m  = d435.D435Manager(width=args.cam_width, height=args.cam_height)
+        clipping_distance = 2 / d435m.depth_scale # 2m
         client = udpclient.UDPClient(args.host, args.port)
         start  = time.time()
         frame_count = 0
@@ -102,7 +110,8 @@ def rs_main():
 
         while True:
             dimg  = d435m.frame()
-            input_image, display_image, output_scale = posenet.read_realsense_frame(dimg['color'], scale_factor=args.scale_factor, output_stride=output_stride)
+            clipped_img = clip_frame(dimg['depth'], dimg['color'], clipping_distance)
+            input_image, display_image, output_scale = posenet.read_realsense_frame(clipped_img, scale_factor=args.scale_factor, output_stride=output_stride)
 
             heatmaps_result, offsets_result, displacement_fwd_result, displacement_bwd_result = sess.run(
                 model_outputs,
