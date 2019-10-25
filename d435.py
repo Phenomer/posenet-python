@@ -16,6 +16,18 @@ class D435Manager():
     depth_intrinsics = None
     color_intrinsics = None
 
+    decimate           = rs.decimation_filter()
+    decimate.set_option(rs.option.filter_magnitude, 1)
+    depth_to_disparity = rs.disparity_transform(True)
+    disparity_to_depth = rs.disparity_transform(False)
+    spatial            = rs.spatial_filter()
+    spatial.set_option(rs.option.filter_smooth_alpha, 0.6)
+    spatial.set_option(rs.option.filter_smooth_delta, 8)
+    temporal           = rs.temporal_filter()
+    temporal.set_option(rs.option.filter_smooth_alpha, 0.5)
+    temporal.set_option(rs.option.filter_smooth_delta, 20)
+    hole_filling       = rs.hole_filling_filter()
+
     def __init__(self, width=640, height=480, serial='828112074708'):
         if D435Manager.pipeline:
             return
@@ -46,6 +58,28 @@ class D435Manager():
             'depth': np.asanyarray(aligned_depth_frame.get_data()),
             'color': np.asanyarray(color_frame.get_data())
         }
+
+    def filtered_frame(self):
+        frames = D435Manager.pipeline.wait_for_frames()
+        aligned_frames = D435Manager.align.process(frames)
+        aligned_depth_frame = aligned_frames.get_depth_frame()
+        color_frame = aligned_frames.get_color_frame()
+        if not aligned_depth_frame or not color_frame:
+            return None
+        filtered_depth_frame = self.filter(aligned_depth_frame)
+        return {
+            'depth': np.asanyarray(filtered_depth_frame.get_data()),
+            'color': np.asanyarray(color_frame.get_data())
+        }
+
+    def filter(self, depth_frame):
+        depth_frame = D435Manager.decimate.process(depth_frame)
+        depth_frame = D435Manager.depth_to_disparity.process(depth_frame)
+        depth_frame = D435Manager.spatial.process(depth_frame)
+        depth_frame = D435Manager.temporal.process(depth_frame)
+        depth_frame = D435Manager.disparity_to_depth.process(depth_frame)
+        depth_frame = D435Manager.hole_filling.process(depth_frame)
+        return depth_frame
 
     def stop(self):
         D435Manager.pipeline.stop

@@ -94,6 +94,23 @@ def clip_frame(depth_frame, color_frame, clipping_distance):
     bg_removed = np.where((dimage_3d > clipping_distance) | (dimage_3d <= 0), grey_color, color_frame)
     return bg_removed
 
+def data_sender(dat, dstat, socket):
+    data = {
+        'face_orient_lr':   face_orient_lr2(dat[0]),
+        'face_z_angle':     face_z_angle(dat[0]),
+        'body_z_angle':     body_z_angle(dat[0]),
+        'body_angle':       body_angle(dat[0]),
+        'shoulder_angle':   shoulder_angle(dat[0]),
+        'leftarm_angle':    leftarm_angle(dat[0]),
+        'rightarm_angle':   rightarm_angle(dat[0]),
+        'leftarm_z_angle':  leftarm_z_angle(dat[0]),
+        'rightarm_z_angle': rightarm_z_angle(dat[0])}
+    dstat.append(data)
+    stat = dstat.process(statistics.mean)
+    stat['eye'] = random.randint(0, 99)
+    stat['mouse'] = random.randint(0, 99)
+    socket.send(stat)
+
 def rs_main():
     with tf.Session() as sess:
         model_cfg, model_outputs = posenet.load_model(args.model, sess)
@@ -129,7 +146,6 @@ def rs_main():
 
             keypoint_coords *= output_scale
 
-
             for pi in range(len(pose_scores)):
                 if pose_scores[pi] <= 0.5:
                     break
@@ -157,8 +173,6 @@ def rs_main():
                 if not 0 in dat:
                     pass
                 data = {
-                    'eye':              random.randint(0, 99),
-                    'mouse':            random.randint(0, 99),
                     'face_orient_lr':   face_orient_lr2(dat[0]),
                     'face_z_angle':     face_z_angle(dat[0]),
                     'body_z_angle':     body_z_angle(dat[0]),
@@ -169,12 +183,16 @@ def rs_main():
                     'leftarm_z_angle':  leftarm_z_angle(dat[0]),
                     'rightarm_z_angle': rightarm_z_angle(dat[0])}
                 dstat.append(data)
-                stat = dstat.process(statistics.mean)
-                client.send(stat)
                 print("EYE:{eye: >4}, MOUSE:{mouse: >4}, FACE_LR:{face_orient_lr: >4}, FACE_Z:{face_z_angle: >4}, BODY:{body_angle: >4}, BODY_Z:{body_z_angle: >4}, SHO:{shoulder_angle: >4}, LARM:{leftarm_angle: >4}, RARM:{rightarm_angle: >4}, LARMZ:{leftarm_z_angle: >4}, RARMZ:{rightarm_z_angle: >4}".format(**stat), end="\r")
             except KeyError as e:
                 print(e)
                 pass
+            finally:
+                stat = dstat.process(statistics.mean)
+                stat['eye'] = random.randint(0, 99)
+                stat['mouse'] = random.randint(0, 99)
+                client.send(stat)
+
             overlay_image = posenet.draw_skel_and_kp(
                 display_image, pose_scores, keypoint_scores, keypoint_coords,
                 min_pose_score=0.15, min_part_score=0.1)

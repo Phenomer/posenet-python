@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import d435
-import msgpack
 import numpy as np
 import imageio
 
@@ -15,7 +14,6 @@ def pixel_to_point(intr, x, y, d):
 	return [d * ux, d * uy, int(d)]
 
 def clip_dump(intr, depth_frame, color_frame, clipping_distance, file):
-    plist = []
     for idx, d in np.ndenumerate(depth_frame):
         if d < clipping_distance:
             continue
@@ -27,9 +25,13 @@ def clip_dump(intr, depth_frame, color_frame, clipping_distance, file):
 d435m  = d435.D435Manager(width=1280, height=720)
 intr   = d435m.depth_intrinsics
 clipping_distance = 2 / d435m.depth_scale # 2m
-for n in range(0, 60):
-    dimg   = d435m.frame()
+
 with open('realsense.tsv', 'w') as f:
-    clip_dump(intr, dimg['depth'], dimg['color'], clipping_distance, f)
-imageio.imwrite("dump_color.png", dimg['color'], 'png')
-imageio.imwrite("dump_depth.png", dimg['depth'], 'png')
+    for n in range(0, 61):
+        if n > 30 and n % 10 == 0:
+            dimg   = d435m.filtered_frame()
+            clip_dump(intr, dimg['depth'], dimg['color'], clipping_distance, f)
+            imageio.imwrite("dump_color_{}.png".format(n), dimg['color'], 'png')
+            imageio.imwrite("dump_depth_{}.png".format(n), dimg['depth'], 'png')
+        else:
+            d435m.frame()
