@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=int, default=101)
 parser.add_argument('--cam_width', type=int, default=424)
 parser.add_argument('--cam_height', type=int, default=240)
+parser.add_argument('--preview_scale', type=int, default=2)
 parser.add_argument('--scale_factor', type=float, default=0.7125)
 parser.add_argument('--file', type=str, default=None, help="Optionally use a video file instead of a live camera")
 parser.add_argument('--host', type=str, default="127.0.0.1")
@@ -196,8 +197,8 @@ def rs_main():
             overlay_image = posenet.draw_skel_and_kp(
                 display_image, pose_scores, keypoint_scores, keypoint_coords,
                 min_pose_score=0.15, min_part_score=0.1)
-
-            cv2.imshow('posenet', overlay_image)
+            resized_overlay_image = cv2.resize(overlay_image,(args.cam_width*args.preview_scale, args.cam_height*args.preview_scale))
+            cv2.imshow('posenet', resized_overlay_image)
             frame_count += 1
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
