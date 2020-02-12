@@ -8,7 +8,6 @@ import math
 import random
 import statistics
 import numpy as np
-
 import posenet
 import d435
 import udpclient
@@ -18,6 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=int, default=101)
 parser.add_argument('--cam_width', type=int, default=424)
 parser.add_argument('--cam_height', type=int, default=240)
+parser.add_argument('--cam_rate', type=int, default=30)
 parser.add_argument('--preview_scale', type=int, default=2)
 parser.add_argument('--scale_factor', type=float, default=0.7125)
 parser.add_argument('--file', type=str, default=None, help="Optionally use a video file instead of a live camera")
@@ -117,8 +117,8 @@ def rs_main():
         model_cfg, model_outputs = posenet.load_model(args.model, sess)
         output_stride = model_cfg['output_stride']
 
-        d435m  = d435.D435Manager(width=args.cam_width, height=args.cam_height)
-        clipping_distance = 2 / d435m.depth_scale # 2m
+        d435m  = d435.D435Manager(width=args.cam_width, height=args.cam_height, rate=args.cam_rate)
+        clipping_distance = 2.5 / d435m.depth_scale # 2m
         client = udpclient.UDPClient(args.host, args.port)
         start  = time.time()
         frame_count = 0
@@ -128,6 +128,10 @@ def rs_main():
 
         while True:
             dimg  = d435m.frame()
+            dimg['depth'] = cv2.resize(dimg['depth'], (320, 240))
+            dimg['color'] = cv2.resize(dimg['color'], (320, 240))
+            dimg['depth'] = np.rot90(dimg['depth'], 3)
+            dimg['color'] = np.rot90(dimg['color'], 3)
             clipped_img = clip_frame(dimg['depth'], dimg['color'], clipping_distance)
             input_image, display_image, output_scale = posenet.read_realsense_frame(clipped_img, scale_factor=args.scale_factor, output_stride=output_stride)
 
@@ -197,7 +201,7 @@ def rs_main():
             overlay_image = posenet.draw_skel_and_kp(
                 display_image, pose_scores, keypoint_scores, keypoint_coords,
                 min_pose_score=0.15, min_part_score=0.1)
-            resized_overlay_image = cv2.resize(overlay_image,(args.cam_width*args.preview_scale, args.cam_height*args.preview_scale))
+            resized_overlay_image = cv2.resize(overlay_image,(args.cam_height*args.preview_scale, args.cam_width*args.preview_scale))
             cv2.imshow('posenet', resized_overlay_image)
             frame_count += 1
             if cv2.waitKey(1) & 0xFF == ord('q'):
