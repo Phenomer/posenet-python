@@ -28,14 +28,14 @@ class D435Manager():
     temporal.set_option(rs.option.filter_smooth_delta, 20)
     hole_filling       = rs.hole_filling_filter()
 
-    def __init__(self, width=640, height=480, serial='828112074708'):
+    def __init__(self, width=640, height=480, serial='828112074708', rate=30):
         if D435Manager.pipeline:
             return
         D435Manager.pipeline = rs.pipeline()
         config = rs.config()
         config.enable_device(serial)
-        config.enable_stream(rs.stream.depth, width, height, rs.format.z16, 30)
-        config.enable_stream(rs.stream.color, width, height, rs.format.bgr8, 30)
+        config.enable_stream(rs.stream.depth, width, height, rs.format.z16, rate)
+        config.enable_stream(rs.stream.color, width, height, rs.format.bgr8, rate)
         D435Manager.profile = D435Manager.pipeline.start(config)
         align_to = rs.stream.color
         D435Manager.align = rs.align(align_to)
