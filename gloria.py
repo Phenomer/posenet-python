@@ -75,7 +75,7 @@ def rs_main():
         dstat = dictstat.DictListStat(600)
 
         while True:
-            dimg  = d435m.frame()
+            dimg  = d435m.filtered_frame()
             #dimg['depth'] = cv2.resize(dimg['depth'], (320, 240))
             #dimg['color'] = cv2.resize(dimg['color'], (320, 240))
             #dimg['depth'] = np.rot90(dimg['depth'], 3)
@@ -99,12 +99,8 @@ def rs_main():
 
             keypoint_coords *= output_scale
 
-            pose_score = pose_scores[0]
             keypoint_score = keypoint_scores[0]
             keypoint_coord = keypoint_coords[0]
-
-            if pose_score <= 0.5:
-                continue
 
             for ki, (s, c) in enumerate(zip(keypoint_score, keypoint_coord[:, :])):
                 x = int(c[0])

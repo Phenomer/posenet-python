@@ -40,9 +40,12 @@ class DictListStat():
         mean = statistics.mean(dlist)
         std  = statistics.stdev(dlist)
         for v in dlist:
-            if v > mean - std or v < mean + std:
-                continue
-            rlist.append(v)
+            if v > mean - std:
+                rlist.append(mean - std)
+            elif v < mean + std:
+                rlist.append(mean + std)
+            else:
+                rlist.append(v)
         return rlist
 
     def process(self, func):
